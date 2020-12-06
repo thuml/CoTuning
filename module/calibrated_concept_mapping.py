@@ -57,6 +57,10 @@ def concept_mapping(train_logits, train_labels, validation_logits, validation_la
     # train_probabilities = softmax_np(train_logits * 0.921597957611084)
     # validation_probabilities = softmax_np(validation_logits * 0.921597957611084)
 
+    all_probabilities = np.concatenate(
+        (train_probabilities, validation_probabilities))
+    all_labels = np.concatenate((train_labels, validation_labels))
+
     Cs = []
     accs = []
     classifiers = []
