@@ -170,31 +170,6 @@ def main():
         else:
             print('computing relationship')
 
-            def get_feature_old(loader):
-                idx = 0
-
-                for train_inputs, train_labels in tqdm(loader):
-                    net.eval()
-                    if idx == 0:
-                        all_train_labels = train_labels
-                    else:
-                        all_train_labels = np.concatenate(
-                            [all_train_labels, train_labels], 0)
-
-                    train_inputs, train_labels = train_inputs.cuda(), train_labels.cuda()
-                    imagenet_labels, _ = net(train_inputs)
-                    imagenet_labels = imagenet_labels.detach().cpu().numpy()
-
-                    if idx == 0:
-                        all_imagenet_labels = imagenet_labels
-                    else:
-                        all_imagenet_labels = np.concatenate(
-                            [all_imagenet_labels, imagenet_labels], 0)
-
-                    idx += 1
-
-                return all_imagenet_labels, all_train_labels
-
             def get_feature(loader):
                 idx = 0
                 train_labels_list = []
@@ -277,7 +252,8 @@ def train(configs, train_loader, val_loader, test_loaders, net, relationship):
         imagenet_outputs, train_outputs = net(train_inputs)
 
         ce_loss = nn.CrossEntropyLoss()(train_outputs, train_labels)
-        imagenet_loss = - imagenet_targets * nn.LogSoftmax(dim=-1)(imagenet_outputs)
+        imagenet_loss = - imagenet_targets * \
+            nn.LogSoftmax(dim=-1)(imagenet_outputs)
         imagenet_loss = torch.mean(torch.sum(imagenet_loss, dim=-1))
         loss = ce_loss + configs.trade_off * imagenet_loss
 
