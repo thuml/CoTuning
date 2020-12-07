@@ -188,8 +188,6 @@ def main():
                 all_train_labels = np.concatenate(train_labels_list, 0)
                 all_imagenet_labels = np.concatenate(imagenet_labels_list, 0)
 
-                print(all_imagenet_labels.shape)
-
                 return all_imagenet_labels, all_train_labels
 
             train_imagenet_labels, train_train_labels = get_feature(
