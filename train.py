@@ -12,7 +12,7 @@ from torchvision import datasets
 from tqdm import tqdm
 
 from module.backbone import ResNet50_F, ResNet50_C
-from module.calibrated_concept_mapping import concept_mapping
+from module.relationship_learning import relationship_learning
 from utils.transforms import get_transforms
 from utils.tools import AccuracyMeter, TenCropsTest
 
@@ -37,7 +37,7 @@ def get_configs():
     parser.add_argument('--print_iter', default=100, type=int)
 
     # dataset
-    parser.add_argument('--data_path', default="/data/finetune",
+    parser.add_argument('--data_path', default="/data/finetune/cub200",
                         type=str, help='Path of dataset')
     parser.add_argument('--class_num', default=200,
                         type=int, help='number of classes')
@@ -61,10 +61,10 @@ def get_configs():
                         help='Root of the experiment')
     parser.add_argument('--name', default='StochNorm', type=str,
                         help='Name of the experiment')
-    parser.add_argument('--trade_off', default=2.1, type=float,
+    parser.add_argument('--trade_off', default=2.3, type=float,
                         help='Trade off for co-tuning')
-    parser.add_argument('--matrix_path', default='matrix.npy', type=str,
-                        help='Path of concept matrix')
+    parser.add_argument('--relationship_path', default='relationship.npy', type=str,
+                        help='Path of pre-computed relationship')
     parser.add_argument('--save_dir', default="model",
                         type=str, help='Path of saved models')
     parser.add_argument('--visual_dir', default="visual",
@@ -159,18 +159,18 @@ def main():
 
     net = Net().cuda()
 
-    if os.path.exists(configs.matrix_path):
-        print('load pre-computed matrix from {}.'.format(configs.matrix_path))
-        matrix = np.load(configs.matrix_path)
+    if os.path.exists(configs.relationship_path):
+        print('load pre-computed relationship from {}.'.format(configs.relationship_path))
+        relationship = np.load(configs.relationship_path)
     else:
-        matrix_path = 'matrix.npy'
-        if os.path.exists(matrix_path):
-            print('load pre-computed matrix')
-            matrix = np.load(matrix_path)
+        relationship_path = 'relationship.npy'
+        if os.path.exists(relationship_path):
+            print('load pre-computed relationship')
+            relationship = np.load(relationship_path)
         else:
-            print('computing matrix')
+            print('computing relationship')
 
-            def get_feature(loader):
+            def get_feature_old(loader):
                 idx = 0
 
                 for train_inputs, train_labels in tqdm(loader):
@@ -195,24 +195,47 @@ def main():
 
                 return all_imagenet_labels, all_train_labels
 
+            def get_feature(loader):
+                idx = 0
+                train_labels_list = []
+                imagenet_labels_list = []
+
+                for train_inputs, train_labels in tqdm(loader):
+                    net.eval()
+                    train_labels_list.append(train_labels)
+
+                    train_inputs, train_labels = train_inputs.cuda(), train_labels.cuda()
+                    imagenet_labels, _ = net(train_inputs)
+                    imagenet_labels = imagenet_labels.detach().cpu().numpy()
+
+                    imagenet_labels_list.append(imagenet_labels)
+
+                all_train_labels = np.concatenate(train_labels_list, 0)
+                all_imagenet_labels = np.concatenate(imagenet_labels_list, 0)
+
+                print(all_imagenet_labels.shape)
+
+                return all_imagenet_labels, all_train_labels
+
             train_imagenet_labels, train_train_labels = get_feature(
                 determin_train_loader)
             val_imagenet_labels, val_train_labels = get_feature(val_loader)
-            matrix = concept_mapping(train_imagenet_labels, train_train_labels,
-                                     val_imagenet_labels, val_train_labels)
+            relationship = relationship_learning(train_imagenet_labels, train_train_labels,
+                                                 val_imagenet_labels, val_train_labels)
 
-            np.save(matrix_path, matrix)
+            np.save(relationship_path, relationship)
 
-    train(configs, train_loader, val_loader, test_loaders, net, matrix)
+    train(configs, train_loader, val_loader, test_loaders, net, relationship)
 
 
-def train(configs, train_loader, val_loader, test_loaders, net, matrix):
+def train(configs, train_loader, val_loader, test_loaders, net, relationship):
     train_len = len(train_loader) - 1
     train_iter = iter(train_loader)
 
     # different learning rates for different layers
     params_list = [{"params": filter(lambda p: p.requires_grad, net.f_net.parameters())},
-                   {"params": filter(lambda p: p.requires_grad, net.c_net_1.parameters())},
+                   {"params": filter(lambda p: p.requires_grad,
+                                     net.c_net_1.parameters())},
                    {"params": filter(lambda p: p.requires_grad, net.c_net_2.parameters()), "lr": configs.lr * 10}]
 
     optimizer = torch.optim.SGD(params_list, lr=configs.lr, weight_decay=configs.weight_decay,
@@ -242,7 +265,8 @@ def train(configs, train_loader, val_loader, test_loaders, net, matrix):
         data_start = time()
 
         train_inputs, train_labels = next(train_iter)
-        imagenet_targets = torch.from_numpy(matrix[train_labels]).cuda().float()
+        imagenet_targets = torch.from_numpy(
+            relationship[train_labels]).cuda().float()
         train_inputs, train_labels = train_inputs.cuda(), train_labels.cuda()
 
         data_duration = time() - data_start
@@ -253,7 +277,7 @@ def train(configs, train_loader, val_loader, test_loaders, net, matrix):
         imagenet_outputs, train_outputs = net(train_inputs)
 
         ce_loss = nn.CrossEntropyLoss()(train_outputs, train_labels)
-        imagenet_loss = - imagenet_targets * torch.log(nn.Softmax(dim=-1)(imagenet_outputs) + 1e-10)
+        imagenet_loss = - imagenet_targets * nn.LogSoftmax(dim=-1)(imagenet_outputs)
         imagenet_loss = torch.mean(torch.sum(imagenet_loss, dim=-1))
         loss = ce_loss + configs.trade_off * imagenet_loss
 

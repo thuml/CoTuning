@@ -6,6 +6,10 @@ import numpy as np
 
 from sklearn.linear_model import LogisticRegression
 
+
+__all__ = ['relationship_learning']
+
+
 def calibrate(logits, labels):
     """
     calibrate by minimizing negative log likelihood.
@@ -33,7 +37,7 @@ def calibrate(logits, labels):
     return scale.item()
 
 
-def concept_mapping(train_logits, train_labels, validation_logits, validation_labels):
+def relationship_learning(train_logits, train_labels, validation_logits, validation_labels):
     """
 
     :param train_logits (ImageNet logits): [N, N_p], where N_p is the number of classes in pre-trained dataset
@@ -54,8 +58,6 @@ def concept_mapping(train_logits, train_labels, validation_logits, validation_la
     train_probabilities = softmax_np(train_logits * 0.8840456604957581)
     validation_probabilities = softmax_np(
         validation_logits * 0.8840456604957581)
-    # train_probabilities = softmax_np(train_logits * 0.921597957611084)
-    # validation_probabilities = softmax_np(validation_logits * 0.921597957611084)
 
     all_probabilities = np.concatenate(
         (train_probabilities, validation_probabilities))
