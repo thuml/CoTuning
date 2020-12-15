@@ -35,4 +35,4 @@ If you use this code for your research, please consider citing:
 ```
 
 ## Contact
-If you have any problem about our code, feel free to contact kz19@mails.tsinghua.edu.com.
+If you have any problem about our code, feel free to contact ykc20@mails.tsinghua.edu.com or kz19@mails.tsinghua.edu.com.

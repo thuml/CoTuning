@@ -7,7 +7,7 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 
 
-__all__ = ['relationship_learning']
+__all__ = ['relationship_learning', 'direct_relationship_learning']
 
 
 def calibrate(logits, labels):
@@ -37,6 +37,14 @@ def calibrate(logits, labels):
     return scale.item()
 
 
+def softmax_np(x):
+    max_el = np.max(x, axis=1, keepdims=True)
+    x = x - max_el
+    x = np.exp(x)
+    s = np.sum(x, axis=1, keepdims=True)
+    return x / s
+
+
 def relationship_learning(train_logits, train_labels, validation_logits, validation_labels):
     """
 
@@ -46,13 +54,6 @@ def relationship_learning(train_logits, train_labels, validation_logits, validat
     :param validation_labels:  [N]
     :return: [N_c, N_p] matrix representing the conditional probability p(pre-trained class | target_class)
      """
-
-    def softmax_np(x):
-        max_el = np.max(x, axis=1, keepdims=True)
-        x = x - max_el
-        x = np.exp(x)
-        s = np.sum(x, axis=1, keepdims=True)
-        return x / s
 
     # convert logits to probabilities
     train_probabilities = softmax_np(train_logits * 0.8840456604957581)
@@ -91,6 +92,9 @@ def relationship_learning(train_logits, train_labels, validation_logits, validat
     p_target_given_pretrain = softmax_np(
         cls.coef_.T * scale)  # shape of [N_p, N_c], conditional probability p(target_class | pre-trained class)
 
+    # in the paper, both ys marginal and yt marginal are computed
+    # here we only use ys marginal to make sure p_pretrain_given_target is a valid conditional probability
+    # (make sure p_pretrain_given_target[i] sums up to 1)
     pretrain_marginal = np.mean(all_probabilities, axis=0).reshape(
         (-1, 1))  # shape of [N_p, 1]
     p_joint_distribution = (p_target_given_pretrain * pretrain_marginal).T
@@ -98,3 +102,31 @@ def relationship_learning(train_logits, train_labels, validation_logits, validat
         np.sum(p_joint_distribution, axis=1, keepdims=True)
 
     return p_pretrain_given_target
+
+
+def direct_relationship_learning(train_logits, train_labels, validation_logits, validation_labels):
+    """
+    The direct approach of learning category relationship.
+
+    :param train_logits (ImageNet logits): [N, N_p], where N_p is the number of classes in pre-trained dataset
+    :param train_labels:  [N], where 0 <= each number < N_t, and N_t is the number of target dataset
+    :param validation_logits (ImageNet logits): [N, N_p]
+    :param validation_labels:  [N]
+    :return: [N_c, N_p] matrix representing the conditional probability p(pre-trained class | target_class)
+     """
+    # convert logits to probabilities
+    train_probabilities = softmax_np(train_logits * 0.8840456604957581)
+    validation_probabilities = softmax_np(
+        validation_logits * 0.8840456604957581)
+
+    all_probabilities = np.concatenate(
+        (train_probabilities, validation_probabilities))
+    all_labels = np.concatenate((train_labels, validation_labels))
+
+    N_t = np.max(all_labels) + 1 # the number of target classes
+    conditional = []
+    for i in range(N_t):
+        this_class = all_probabilities[all_labels == i]
+        average = np.mean(this_class, axis=0, keepdims=True)
+        conditional.append(average)
+    return np.concatenate(conditional)
