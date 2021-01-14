@@ -5,6 +5,10 @@ Official implementation for NeurIPS 2020 paper [Co-Tuning for Transfer Learning]
 
 # COCO 70 dataset
 
+COCO 70 dataset is a **large-scale** classification dataset (1000 images per class) created from COCO. It is used to explore the effect of fine-tuning with a large amount of data. Check our paper if you are interested in how it was created. Please respect the original license of COCO when you use it.
+
+To download COCO 70, follow these steps:
+
 1. download separate files [here](https://cloud.tsinghua.edu.cn/d/b364038fd4544530bc08/) (the file is too large to upload, so I have to split it into chunks)
 2. merge separate files into a single file by ```cat COCO70_splita* > COCO70.tar```
 
@@ -25,6 +29,8 @@ The directory architecture looks like the following:
    ├── train
 
    └── train.txt 
+
+There are 100 images per class for validation (dev.txt) and test (test.txt) respectively, and 800 images per class for training (train.txt).
 
 ## Dependencies
 * python3
@@ -48,7 +54,6 @@ python --gpu [gpu_num] --data_path /path/to/dataset --class_num [class_num] --tr
 ```
 
 ## Citation
-If you use this code for your research, please consider citing:
 ```
 @article{you2020co,
   title={Co-Tuning for Transfer Learning},
