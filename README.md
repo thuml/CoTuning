@@ -54,6 +54,7 @@ python --gpu [gpu_num] --data_path /path/to/dataset --class_num [class_num] --tr
 ```
 
 ## Citation
+If you use our code or use the constructed COCO-70 dataset, please consider citing:
 ```
 @article{you2020co,
   title={Co-Tuning for Transfer Learning},
