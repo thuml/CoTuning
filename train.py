@@ -123,6 +123,46 @@ def get_data_loader(configs):
 
     return train_loader, determin_train_loader, val_loader, test_loaders
 
+def get_data_loader_test(configs):
+    data_transforms = get_transforms(resize_size=256, crop_size=224)
+
+    # build dataset
+    train_dataset = datasets.FGVCAircraft(
+        configs.data_path, split= 'train', 
+        transform=data_transforms['train'], download=True)
+    determin_train_dataset = datasets.FGVCAircraft(
+        configs.data_path, split= 'train', 
+        transform=data_transforms['val'], download=True)
+    val_dataset = datasets.FGVCAircraft(
+        configs.data_path, split= 'val', 
+        transform=data_transforms['val'], download=True)
+    test_datasets = {
+        "test"+str(i):
+            datasets.FGVCAircraft(
+                configs.data_path, split= 'test', 
+                transform=data_transforms['test'+str(i)], download=True
+            )
+        for i in range(20)
+    }
+
+    # build dataloader
+    train_loader = DataLoader(train_dataset, batch_size=configs.batch_size, shuffle=True,
+                              num_workers=configs.num_workers, pin_memory=True)
+    determin_train_loader = DataLoader(determin_train_dataset, batch_size=configs.batch_size, shuffle=False,
+                                       num_workers=configs.num_workers, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=configs.batch_size, shuffle=False,
+                            num_workers=configs.num_workers, pin_memory=True)
+    test_loaders = {
+        'test' + str(i):
+            DataLoader(
+                test_datasets["test" + str(i)],
+                batch_size=4, shuffle=False, num_workers=configs.num_workers
+        )
+        for i in range(10)
+    }
+
+    return train_loader, determin_train_loader, val_loader, test_loaders
+
 
 def set_seeds(seed):
     np.random.seed(seed)
@@ -138,7 +178,7 @@ def main():
     torch.cuda.set_device(configs.gpu)
     set_seeds(configs.seed)
 
-    train_loader, determin_train_loader, val_loader, test_loaders = get_data_loader(
+    train_loader, determin_train_loader, val_loader, test_loaders = get_data_loader_test(
         configs)
 
     class Net(nn.Module):
