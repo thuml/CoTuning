@@ -66,4 +66,4 @@ If you use our code or use the constructed COCO-70 dataset, please consider citi
 ```
 
 ## Contact
-If you have any problem about our code, feel free to contact ykc20@mails.tsinghua.edu.com or kz19@mails.tsinghua.edu.com.
+If you have any problem about our code, feel free to contact ykc20@mails.tsinghua.edu.cn or kz19@mails.tsinghua.edu.cn.
