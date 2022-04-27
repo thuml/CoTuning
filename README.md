@@ -1,6 +1,8 @@
 # CoTuning
 Official implementation for NeurIPS 2020 paper [Co-Tuning for Transfer Learning](https://proceedings.neurips.cc//paper/2020/file/c8067ad1937f728f51288b3eb986afaa-Paper.pdf).
 
+[News] 2022/04/27 Please refer to the [Transfer Learning Library](https://github.com/thuml/Transfer-Learning-Library/blob/master/talib/finetune/co_tuning.py) for a modular implementation.
+
 [News] 2021/01/13 The COCO 70 dataset used in the paper is available for download! 
 
 # COCO 70 dataset
